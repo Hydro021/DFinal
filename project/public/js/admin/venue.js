@@ -106,17 +106,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
   
-    // Handle delete action
-    deleteBtn.addEventListener("click", function () {
-        let selected = document.querySelectorAll(".item-checkbox:checked");
-        if (selected.length === 0) return;
-  
-        if (confirm("Are you sure you want to delete selected items?")) {
-            selected.forEach(checkbox => checkbox.closest("tr").remove());
-            updateButtons();
-        }
-    });
-  
     // Function to update button visibility based on checkbox selection
     function updateButtons() {
         let checkedItems = document.querySelectorAll(".item-checkbox:checked").length;
@@ -140,8 +129,228 @@ document.addEventListener("DOMContentLoaded", function () {
         itemCheckboxes.forEach(checkbox => checkbox.checked = false);
         updateButtons();
     }
-  });
-  
+});
+
+// Function to delete venues (both single and multiple)
+function deleteVenues(venueNames) {
+    if (!Array.isArray(venueNames)) {
+        venueNames = [venueNames];
+    }
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `Do you want to delete ${venueNames.length > 1 ? 'these venues' : 'this venue'}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch('/admin/venue/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ venueNames })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove rows from table
+                    venueNames.forEach(name => {
+                        const row = document.querySelector(`tr[data-name="${name}"]`);
+                        if (row) row.remove();
+                    });
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Venue(s) deleted successfully'
+                    });
+
+                    // Reset UI for multiple deletes
+                    if (venueNames.length > 1) {
+                        document.getElementById('select-all').checked = false;
+                        document.getElementById('delete-btn').classList.add('hidden');
+                        document.getElementById('edit-btn').classList.remove('hidden');
+                    }
+                } else {
+                    throw new Error(data.message || 'Failed to delete venue(s)');
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: error.message || 'Something went wrong while deleting'
+                });
+            });
+        }
+    });
+}
+
+// Function to delete a single venue
+function deleteSingleVenue(button) {
+    const row = button.closest('tr');
+    const venueName = row.getAttribute('data-name');
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `Do you want to delete ${venueName}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Send delete request
+            fetch('/admin/venue/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ venueName: venueName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    row.remove();
+                    Swal.fire('Deleted!', data.message, 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to delete venue');
+                }
+            })
+            .catch(error => {
+                Swal.fire('Error!', error.message, 'error');
+            });
+        }
+    });
+}
+
+// Function to delete multiple selected venues
+function deleteSelectedItems() {
+    const selectedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
+    const selectedVenues = Array.from(selectedCheckboxes).map(checkbox => 
+        checkbox.closest('tr').getAttribute('data-name')
+    );
+
+    if (selectedVenues.length === 0) {
+        Swal.fire('No Selection', 'Please select venues to delete.', 'info');
+        return;
+    }
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `Do you want to delete ${selectedVenues.length} selected venues?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete them!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Send delete request
+            fetch('/admin/venue/delete-multiple', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ venueNames: selectedVenues })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    selectedVenues.forEach(name => {
+                        const row = document.querySelector(`tr[data-name="${name}"]`);
+                        if (row) row.remove();
+                    });
+                    
+                    // Reset UI
+                    document.getElementById('select-all').checked = false;
+                    document.getElementById('delete-btn').classList.add('hidden');
+                    document.getElementById('edit-btn').classList.remove('hidden');
+                    
+                    Swal.fire('Deleted!', data.message, 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to delete venues');
+                }
+            })
+            .catch(error => {
+                Swal.fire('Error!', error.message, 'error');
+            });
+        }
+    });
+}
+
+// Setup event listeners when document is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Individual delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const venueName = this.closest('tr').getAttribute('data-name');
+            deleteVenues(venueName);
+        });
+    });
+
+    // Bulk delete button
+    const deleteBtn = document.getElementById('delete-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function() {
+            const selectedNames = Array.from(document.querySelectorAll('.item-checkbox:checked'))
+                .map(checkbox => checkbox.closest('tr').getAttribute('data-name'));
+            
+            if (selectedNames.length === 0) {
+                Swal.fire('No Selection', 'Please select venues to delete.', 'info');
+                return;
+            }
+            
+            deleteVenues(selectedNames);
+        });
+    }
+
+    // Add click handlers to individual delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.onclick = function() {
+            deleteSingleVenue(this);
+        };
+    });
+});
 
 // Function to filter venues based on the selected category
 function filterVenues() {
@@ -395,18 +604,32 @@ document.addEventListener("DOMContentLoaded", function () {
             const data = await response.json();
             
             if (data.success) {
-                alert('Venue added successfully!');
+                showNotification('Venue added successfully!');
                 document.getElementById('venueModal').style.display = 'none';
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                showNotification(data.message || 'Error adding venue', false);
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error adding venue');
+            showNotification('Error adding venue', false);
         }
     });
 });
+
+// Notification function
+function showNotification(message, isSuccess = true) {
+    const notification = document.getElementById('notification');
+    const notificationMessage = document.getElementById('notification-message');
+    
+    notification.style.backgroundColor = isSuccess ? '#28a745' : '#dc3545';
+    notificationMessage.textContent = message;
+    notification.style.display = 'block';
+    
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 3000);
+}
 
 function toggleDropdown() {
     const dropdown = document.getElementById('profileDropdown');

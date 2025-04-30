@@ -641,46 +641,128 @@ public function update(Request $request)
     public function storeV(Request $request)
     {
         try {
+            // Validate request
+            $validated = $request->validate([
+                'venueName' => 'required|string|max:255|unique:venue,name',
+                'venueLocation' => 'required|string',
+                'venueCapacity' => 'required|integer|min:1',
+                'venueOther' => 'required_if:venueLocation,Other',
+                'floors' => 'required_if:venueLocation,Dande\'s Resto',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+            ]);
+
             // Handle image uploads
             $imageNames = [];
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
-                    $randomNumber = rand(100000, 999999);
+                    $randomNumber = Str::random(20);
                     $extension = $image->getClientOriginalExtension();
                     $fileName = $randomNumber . '.' . $extension;
-                    $image->storeAs('venue_images', $fileName, 'public'); // Store in 'public' disk
+                    
+                    // Store image and add to array
+                    $image->storeAs('venue_images', $fileName, 'public');
                     $imageNames[] = 'venue_images/' . $fileName;
                 }
             }
-    
-            // Create venue array with default empty values
+
+            // Create venue data array
             $venueData = [
                 'name' => $request->venueName,
                 'location' => $request->venueLocation,
                 'capacity' => $request->venueCapacity,
-                'specifylocation' => "",
-                'floorlevel' => "",
+                'specifylocation' => $request->venueLocation === 'Other' ? $request->venueOther : "",
+                'floorlevel' => $request->venueLocation === "Dande's Resto" ? $request->floors : "",
                 'image' => !empty($imageNames) ? implode(',', $imageNames) : "",
                 'created_at' => now(),
                 'updated_at' => now()
             ];
-    
-            // Update specifylocation if location is "Other"
-            if ($request->venueLocation === 'Other') {
-                $venueData['specifylocation'] = $request->venueOther;
-            }
-    
-            // Update floorlevel if location is "Dande's Resto"
-            if ($request->venueLocation === "Dande's Resto") {
-                $venueData['floorlevel'] = $request->floors;
-            }
-    
+
             // Insert into database
             DB::table('venue')->insert($venueData);
-    
-            return response()->json(['success' => true]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Venue created successfully'
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+            // Log the error for debugging
+            \Log::error('Venue creation error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while creating the venue'
+            ], 500);
+        }
+    }
+    public function deleteV(Request $request)
+    {
+        try {
+            $venueName = $request->venueName;
+            
+            $venue = DB::table('venue')->where('name', $venueName)->first();
+            
+            if ($venue && $venue->image) {
+                $images = explode(',', $venue->image);
+                foreach ($images as $image) {
+                    $filename = basename($image);
+                    if (Storage::disk('public')->exists('venue_images/' . $filename)) {
+                        Storage::disk('public')->delete('venue_images/' . $filename);
+                    }
+                }
+            }
+            
+            DB::table('venue')->where('name', $venueName)->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Venue deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting venue: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deleteMultipleV(Request $request)
+    {
+        try {
+            $venueNames = $request->venueNames;
+            
+            foreach ($venueNames as $venueName) {
+                $venue = DB::table('venue')->where('name', $venueName)->first();
+                
+                if ($venue && $venue->image) {
+                    $images = explode(',', $venue->image);
+                    foreach ($images as $image) {
+                        $filename = basename($image);
+                        if (Storage::disk('public')->exists('venue_images/' . $filename)) {
+                            Storage::disk('public')->delete('venue_images/' . $filename);
+                        }
+                    }
+                }
+                
+                DB::table('venue')->where('name', $venueName)->delete();
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => count($venueNames) . ' venues deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting venues: ' . $e->getMessage()
+            ], 500);
         }
     }
 }
+

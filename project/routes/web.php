@@ -90,3 +90,5 @@ Route::post('/admin/event/save', [AdminDash::class, 'store'])->name('admin.event
 Route::post('/admin/event/delete', [AdminDash::class, 'deleteEvents'])->name('admin.event.delete');
 Route::put('/admin/event/update', [AdminDash::class, 'update'])->name('admin.event.update');
 Route::post('/venue/store', [AdminDash::class, 'storeV'])->name('venue.store');
+Route::post('/admin/venue/delete', [AdminDash::class, 'deleteV'])->name('admin.venue.delete');
+Route::post('/admin/venue/delete-multiple', [AdminDash::class, 'deleteMultipleV'])->name('admin.venue.deleteMultiple');

@@ -189,8 +189,8 @@
                     <td>{{ $venue->capacity }}</td> 
                     <td>
                         <button class="edit-btn bx bx-edit"></button>
-                        <button class="delete-btn bx bx-trash"></button>
-                    </td>
+						<button class="delete-btn bx bx-trash"></button>
+						</td>
                 </tr>
             @endforeach
 					</table>
@@ -260,8 +260,10 @@
 			</button>
 		</div>
 	</div>
-	
-
+	<div id="notification" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #28a745; color: white; padding: 10px 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); font-size: 16px; z-index: 9999;">
+    <span id="notification-message"></span>
+</div>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ asset('js/admin/venue.js') }}"></script>
 </body>
 </html>
