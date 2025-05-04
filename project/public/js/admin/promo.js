@@ -633,329 +633,304 @@ function filterTableBySearch(searchTerm) {
         tableContainer.classList.remove('many-items');
     }
 }
+document.addEventListener('DOMContentLoaded', function () {
+  // --- EDIT PROMO MODAL LOGIC ---
+  const editMenuSelect = document.getElementById('editMenuSelect');
+  const editMenuList = document.getElementById('editMenuList');
+  const editPromoImage = document.getElementById('editPromoImage');
+  const editPromoImagePreviewContainer = document.getElementById('editPromoImagePreviewContainer');
+  const editDropArea = document.getElementById('editPromoDropArea');
+  const editFileInput = editPromoImage;
+  const editPromoForm = document.getElementById('editPromoForm');
+  const existingFiles = new Map();
+  const editClearAllBtn = document.getElementById('editPromoClearAllBtn');
 
-document.addEventListener('DOMContentLoaded', function() {
-  // Handle edit button clicks in the table
-  document.getElementById('promoTableBody').addEventListener('click', function(e) {
-      if (e.target.classList.contains('bx-edit')) {
-          const row = e.target.closest('tr');
-          const promo = {
-              id: row.dataset.id,
-              name: row.dataset.name,
-              description: row.dataset.description, 
-              menulist: row.dataset.menulist,
-              venue: row.dataset.venue,
-              price: row.dataset.price,
-              image: row.dataset.image
-          };
-          openEditModal(promo);
-      }
+  document.getElementById('promoTableBody').addEventListener('click', function (e) {
+    if (e.target.classList.contains('bx-edit')) {
+      const row = e.target.closest('tr');
+      const promo = {
+        id: row.dataset.id,
+        name: row.dataset.name,
+        description: row.dataset.description,
+        menulist: row.dataset.menulist,
+        venue: row.dataset.venue,
+        price: row.dataset.price,
+        image: row.dataset.image
+      };
+      openEditModal(promo);
+    }
   });
 
-  // Function to open and populate edit modal
+  const closeEditBtn = document.querySelector('.close-edit');
+  const editPromoModal = document.getElementById('editPromoModal');
+  if (closeEditBtn && editPromoModal) {
+    closeEditBtn.addEventListener('click', function () {
+      editPromoModal.style.display = 'none';
+    });
+  }
+
+  function showEditPlaceholder() {
+    editPromoImagePreviewContainer.innerHTML = '<p id="editPromoPlaceholderText" class="placeholder-text">Images will be shown here</p>';
+  }
+
   function openEditModal(promo) {
-      // Show edit modal
-      document.getElementById('editPromoModal').style.display = 'block';
-      
-      // Populate form fields
-      document.getElementById('editPromoId').value = promo.id;
-      document.getElementById('editPromoName').value = promo.name;
-      document.getElementById('editPromoDescription').value = promo.description;
-      document.getElementById('editVenueSelect').value = promo.venue;
-      document.getElementById('editPromoPrice').value = promo.price;
-      document.getElementById('originalName').value = promo.name;
+    document.getElementById('editPromoModal').style.display = 'block';
+    document.getElementById('editPromoId').value = promo.id;
+    document.getElementById('editPromoName').value = promo.name;
+    document.getElementById('editPromoDescription').value = promo.description;
+    document.getElementById('editVenueSelect').value = promo.venue;
+    document.getElementById('editPromoPrice').value = promo.price;
+    document.getElementById('originalName').value = promo.name;
 
-      // Handle menu list
-      const editMenuList = document.getElementById('editMenuList');
-      editMenuList.innerHTML = '';
-      const menuItems = promo.menulist.split(',');
-      menuItems.forEach(item => {
-          if (item.trim()) {
-              addMenuItemToList(item.trim(), editMenuList, 'editMenuField');
-          }
-      });
-
-      // Handle existing images
-      const previewContainer = document.getElementById('editPromoImagePreviewContainer');
-      previewContainer.innerHTML = '';
-      if (promo.image) {
-          const images = promo.image.split(',');
-          images.forEach(imagePath => {
-              if (imagePath.trim()) {
-                  createImagePreview(imagePath.trim(), previewContainer);
-              }
-          });
-          document.getElementById('retained_images').value = promo.image;
+    editMenuList.innerHTML = '';
+    const menuItems = promo.menulist.split(',');
+    menuItems.forEach(item => {
+      if (item.trim()) {
+        addMenuItemToList(item.trim(), editMenuList, 'editMenuField');
       }
-  }
+    });
 
-  // Helper function to add menu items to list
-  function addMenuItemToList(name, listElement, hiddenFieldId) {
-      const div = document.createElement('div');
-      div.classList.add('menu-item');
-      
-      const span = document.createElement('span');
-      span.textContent = name;
-      
-      const btn = document.createElement('button');
-      btn.innerHTML = '❌';
-      btn.classList.add('button2');
-      btn.type = 'button';
-      btn.style.cursor = 'pointer';
-      
-      btn.addEventListener('click', function(e) {
-          e.preventDefault();
-          div.remove();
-          updateMenuField(listElement, hiddenFieldId);
+    editPromoImagePreviewContainer.innerHTML = '';
+    existingFiles.clear();
+    editFileInput.value = '';
+
+    if (promo.image) {
+      const images = promo.image.split(',');
+      images.forEach(imagePath => {
+        if (imagePath.trim()) {
+          createImagePreview(imagePath.trim(), editPromoImagePreviewContainer);
+        }
       });
-      
-      div.append(span, btn);
-      listElement.appendChild(div);
-      updateMenuField(listElement, hiddenFieldId);
+      document.getElementById('retained_images').value = promo.image;
+    }
+    // Show placeholder if no images
+    if (!promo.image || !promo.image.trim()) {
+      showEditPlaceholder();
+      document.getElementById('retained_images').value = '';
+    }
   }
 
-  // Helper function to update menu hidden field
-  function updateMenuField(listElement, fieldId) {
-      const menuItems = Array.from(listElement.querySelectorAll('.menu-item span'))
-          .map(span => span.textContent.trim());
-      document.getElementById(fieldId).value = menuItems.join(',');
+  function addMenuItemToList(name, listElement, hiddenFieldId) {
+    const div = document.createElement('div');
+    div.classList.add('menu-item');
+    const span = document.createElement('span');
+    span.textContent = name;
+    const btn = document.createElement('button');
+    btn.innerHTML = '❌';
+    btn.classList.add('button2');
+    btn.type = 'button';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      div.remove();
+      updateMenuField(listElement, hiddenFieldId);
+    });
+    div.append(span, btn);
+    listElement.appendChild(div);
+    updateMenuField(listElement, hiddenFieldId);
   }
-// Helper function to create image preview with filename
-function createImagePreview(imagePath, container) {
-  const div = document.createElement('div');
-  div.className = 'image-preview';
-  
-  // Create image
-  const img = document.createElement('img');
-  img.src = `/storage/${imagePath}`;
-  img.className = 'preview-img';
-  
-  // Create filename text
-  const nameSpan = document.createElement('span');
-  nameSpan.className = 'file-name';
-  // Extract just the filename from path
-  const fileName = imagePath.split('/').pop();
-  nameSpan.textContent = fileName;
-  
-  // Create remove button
-  const remBtn = document.createElement('button');
-  remBtn.innerHTML = '×';
-  remBtn.className = 'remove-btn';
-  remBtn.onclick = function() {
+
+  function updateMenuField(listElement, fieldId) {
+    const menuItems = Array.from(listElement.querySelectorAll('.menu-item span')).map(span => span.textContent.trim());
+    document.getElementById(fieldId).value = menuItems.join(',');
+  }
+
+  function createImagePreview(imagePath, container) {
+    // Remove placeholder if present
+    const placeholder = container.querySelector('.placeholder-text');
+    if (placeholder) placeholder.remove();
+
+    const div = document.createElement('div');
+    div.className = 'image-preview';
+    const img = document.createElement('img');
+    img.src = `/storage/${imagePath}`;
+    img.className = 'preview-img';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'file-name';
+    nameSpan.textContent = imagePath.split('/').pop();
+    const remBtn = document.createElement('button');
+    remBtn.innerHTML = '×';
+    remBtn.className = 'remove-btn';
+    remBtn.onclick = function () {
       div.remove();
       updateRetainedImages();
-  };
-  
-  // Append all elements
-  div.append(img, nameSpan, remBtn);
-  container.appendChild(div);
-}
+      // Show placeholder if no images left
+      if (!container.querySelector('.image-preview')) showEditPlaceholder();
+    };
+    div.append(img, nameSpan, remBtn);
+    container.appendChild(div);
+  }
 
-  // Function to update retained images hidden field
   function updateRetainedImages() {
-      const container = document.getElementById('editPromoImagePreviewContainer');
-      const images = Array.from(container.querySelectorAll('img'))
-          .map(img => img.src.split('/storage/')[1]);
-      document.getElementById('retained_images').value = images.join(',');
+    const container = document.getElementById('editPromoImagePreviewContainer');
+    const images = Array.from(container.querySelectorAll('img')).map(img => img.src.split('/storage/')[1]);
+    document.getElementById('retained_images').value = images.join(',');
   }
 
-  // Close edit modal
-  document.querySelector('.close-edit').addEventListener('click', function() {
-      document.getElementById('editPromoModal').style.display = 'none';
-  });
-
-  // Handle edit menu select - Modified to silently handle duplicates
-  const editMenuSelect = document.getElementById('editMenuSelect');
   if (editMenuSelect) {
-      editMenuSelect.addEventListener('change', function(e) {
-          e.preventDefault();
-          const name = this.options[this.selectedIndex].textContent.trim();
-          
-          // Skip if empty selection or default option
-          if (!name || name === 'Select Menu Item') {
-              return;
-          }
-          
-          // Get existing menu items
-          const existingItems = Array.from(document.querySelectorAll('#editMenuList .menu-item span'))
-              .map(span => span.textContent.trim());
-          
-          // Only add if not already in list
-          if (!existingItems.includes(name)) {
-              addMenuItemToList(name, document.getElementById('editMenuList'), 'editMenuField');
-          }
-          
-          // Reset select to default option
-          this.value = '';
-      });
+    editMenuSelect.addEventListener('change', function (e) {
+      const name = this.options[this.selectedIndex].textContent.trim();
+      if (!name || name === 'Select Menu Item') return;
+      const existingItems = Array.from(document.querySelectorAll('#editMenuList .menu-item span')).map(span => span.textContent.trim());
+      if (!existingItems.includes(name)) {
+        addMenuItemToList(name, document.getElementById('editMenuList'), 'editMenuField');
+      }
+      this.value = '';
+    });
   }
-});
-document.addEventListener('DOMContentLoaded', function() {
-  // Add drag and drop functionality for edit modal
-  const editDropArea = document.getElementById('editPromoDropArea');
-  const editFileInput = document.getElementById('editPromoImage');
-  const editPreviewContainer = document.getElementById('editPromoImagePreviewContainer');
-  const existingFiles = new Map();
 
-  // Enable file selection (remove multiple since we only want one)
-  editFileInput.removeAttribute('multiple');
-
-  // Prevent defaults for drag events
+  // Drag and drop events for folder and file support
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
-      editDropArea.addEventListener(evt, preventDefaults, false);
-      document.body.addEventListener(evt, preventDefaults, false);
-  });
-
-  // Add visual feedback for drag events
-  ['dragenter', 'dragover'].forEach(evt => {
-      editDropArea.addEventListener(evt, highlight, false);
-  });
-  ['dragleave', 'drop'].forEach(evt => {
-      editDropArea.addEventListener(evt, unhighlight, false);
-  });
-
-  // Handle drop event and click to select
-  editDropArea.addEventListener('drop', handleDrop, false);
-  editDropArea.addEventListener('click', () => editFileInput.click());
-  editFileInput.addEventListener('change', handleFiles);
-
-  function preventDefaults(e) {
+    editDropArea.addEventListener(evt, e => {
       e.preventDefault();
       e.stopPropagation();
-  }
+    });
+  });
 
-  function highlight() {
-      editDropArea.classList.add('highlight');
-  }
+  ['dragenter', 'dragover'].forEach(evt => {
+    editDropArea.addEventListener(evt, () => editDropArea.classList.add('highlight'));
+  });
 
-  function unhighlight() {
-      editDropArea.classList.remove('highlight');
-  }
+  ['dragleave', 'drop'].forEach(evt => {
+    editDropArea.addEventListener(evt, () => editDropArea.classList.remove('highlight'));
+  });
 
-  function handleDrop(e) {
-      const dt = e.dataTransfer;
-      const files = [...dt.files];
-      // Only take the first file
-      if (files.length > 0) {
-          handleFiles({ target: { files: [files[0]] } });
+  editDropArea.addEventListener('drop', async function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const dt = e.dataTransfer;
+    if (dt.items) {
+      const items = Array.from(dt.items);
+      const files = [];
+      for (const item of items) {
+        if (item.kind === 'file') {
+          const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+          if (entry) {
+            await traverseFileTree(entry, files);
+          } else {
+            const file = item.getAsFile();
+            if (file) files.push(file);
+          }
+        }
       }
+      handleFilesFromDrop(files);
+    } else {
+      handleFilesFromDrop([...dt.files]);
+    }
+  });
+
+  async function traverseFileTree(item, fileList) {
+    return new Promise((resolve) => {
+      if (item.isFile) {
+        item.file(function (file) {
+          fileList.push(file);
+          resolve();
+        });
+      } else if (item.isDirectory) {
+        const dirReader = item.createReader();
+        dirReader.readEntries(async function (entries) {
+          for (const entry of entries) {
+            await traverseFileTree(entry, fileList);
+          }
+          resolve();
+        });
+      }
+    });
   }
 
-  function handleFiles(e) {
-      const file = e.target.files[0]; // Only handle first file
-      
-      if (!file) return;
+  function handleFilesFromDrop(files) {
+    const placeholder = editPromoImagePreviewContainer.querySelector('.placeholder-text');
+    if (placeholder) placeholder.remove();
 
+    files.forEach(file => {
       if (!file.type.startsWith('image/')) {
-          showNotification(`${file.name} is not an image file`, 'error');
-          return;
+        showNotification(`${file.name} is not an image file`, 'error');
+        return;
       }
-
-      // Clear existing files and preview
-      existingFiles.clear();
-      editPreviewContainer.innerHTML = '';
-
       const fileKey = `${file.name}-${file.size}`;
+      if (existingFiles.has(fileKey)) {
+        showNotification(`${file.name} already exists`, 'error');
+        return;
+      }
       existingFiles.set(fileKey, file);
 
       const reader = new FileReader();
-      reader.onload = function(e) {
-          const div = document.createElement('div');
-          div.className = 'image-preview';
-          
-          // Create image
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          img.className = 'preview-img';
-          
-          // Create filename text
-          const nameSpan = document.createElement('span');
-          nameSpan.className = 'file-name';
-          nameSpan.textContent = file.name;
-          
-          // Create remove button
-          const remBtn = document.createElement('button');
-          remBtn.innerHTML = '×';
-          remBtn.className = 'remove-btn';
-          remBtn.onclick = function() {
-              existingFiles.clear();
-              div.remove();
-              editFileInput.value = '';
-              // Show retained images if they exist
-              const retainedImages = document.getElementById('retained_images').value;
-              if (retainedImages) {
-                  const images = retainedImages.split(',');
-                  images.forEach(imagePath => {
-                      if (imagePath.trim()) {
-                          createImagePreview(imagePath.trim(), editPreviewContainer);
-                      }
-                  });
-              }
-          };
-          
-          // Append elements
-          div.append(img, nameSpan, remBtn);
-          editPreviewContainer.appendChild(div);
+      reader.onload = function (e) {
+        const div = document.createElement('div');
+        div.className = 'image-preview';
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.className = 'preview-img';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'file-name';
+        nameSpan.textContent = file.name;
+        const remBtn = document.createElement('button');
+        remBtn.innerHTML = '×';
+        remBtn.className = 'remove-btn';
+        remBtn.onclick = function () {
+          existingFiles.delete(fileKey);
+          div.remove();
+          if (!editPromoImagePreviewContainer.querySelector('.image-preview')) showEditPlaceholder();
+        };
+        div.append(img, nameSpan, remBtn);
+        editPromoImagePreviewContainer.appendChild(div);
       };
       reader.readAsDataURL(file);
-
-      // Update file input
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      editFileInput.files = dt.files;
+    });
+    editFileInput.value = '';
   }
 
-  // Form submission handler
-  const editPromoForm = document.getElementById('editPromoForm');
-  editPromoForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const formData = new FormData(this);
-      const originalName = document.getElementById('originalName').value;
-      formData.append('original_name', originalName);
-      
-      // Add new image if exists
-      if (existingFiles.size > 0) {
-          const file = existingFiles.values().next().value;
-          formData.append('images[]', file);
-      }
-
-      try {
-          const response = await fetch('/admin/promo/update', {
-              method: 'POST',
-              headers: {
-                  'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-              },
-              body: formData
-          });
-
-          const data = await response.json();
-
-          if (data.success) {
-              showNotification('Promo updated successfully', 'success');
-              setTimeout(() => {
-                  window.location.reload();
-              }, 2000);
-          } else {
-              throw new Error(data.message || 'Failed to update promo');
-          }
-
-      } catch (error) {
-          showNotification(error.message, 'error');
-      }
+  editDropArea.addEventListener('click', () => editFileInput.click());
+  editFileInput.addEventListener('change', function (e) {
+    handleFilesFromDrop([...e.target.files]);
+    editFileInput.value = '';
   });
 
-  // Notification function
+  // CLEAR ALL BUTTON FUNCTIONALITY
+  if (editClearAllBtn) {
+    editClearAllBtn.addEventListener('click', function () {
+      existingFiles.clear();
+      editPromoImagePreviewContainer.innerHTML = '';
+      showEditPlaceholder();
+      document.getElementById('retained_images').value = '';
+    });
+  }
+
+  editPromoForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const originalName = document.getElementById('originalName').value;
+    formData.append('original_name', originalName);
+    for (let file of existingFiles.values()) {
+      formData.append('images[]', file);
+    }
+    try {
+      const response = await fetch('/admin/promo/update', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success) {
+        showNotification('Promo updated successfully', 'success');
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        throw new Error(data.message || 'Failed to update promo');
+      }
+    } catch (error) {
+      showNotification(error.message, 'error');
+    }
+  });
+
   function showNotification(message, type = 'success') {
-      const notification = document.getElementById('notification');
-      const notificationMessage = document.getElementById('notification-message');
-      
-      notification.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545';
-      notificationMessage.textContent = message;
-      notification.style.display = 'block';
-      
-      setTimeout(() => {
-          notification.style.display = 'none';
-      }, 3000);
+    const notification = document.getElementById('notification');
+    const notificationMessage = document.getElementById('notification-message');
+    notification.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545';
+    notificationMessage.textContent = message;
+    notification.style.display = 'block';
+    setTimeout(() => {
+      notification.style.display = 'none';
+    }, 3000);
   }
 });

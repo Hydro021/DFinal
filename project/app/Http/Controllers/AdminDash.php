@@ -981,7 +981,7 @@ public function deletePromos(Request $request)
         'message' => 'Selected promo(s) deleted successfully.'
     ]);
 }
-// Add this method to your AdminDash controller
+
 public function updatePromo(Request $request)
 {
     try {
@@ -1003,11 +1003,11 @@ public function updatePromo(Request $request)
 
         // Handle existing images
         $existingImages = !empty($promo->image) ? explode(',', $promo->image) : [];
-        $retainedImages = !empty($request->retained_images) ? explode(',', $request->retained_images) : [];
+        $retainedImages = array_filter(array_map('trim', explode(',', (string)$request->retained_images)));
 
         // Delete removed images from storage
         foreach ($existingImages as $image) {
-            if (!in_array($image, $retainedImages)) {
+            if ($image && !in_array($image, $retainedImages)) {
                 if (Storage::disk('public')->exists($image)) {
                     Storage::disk('public')->delete($image);
                 }
@@ -1018,14 +1018,16 @@ public function updatePromo(Request $request)
         $newImages = [];
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $uniqueName = Str::random(20) . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('promo_images', $uniqueName, 'public');
-                $newImages[] = 'promo_images/' . $uniqueName;
+                if ($image && $image->isValid()) {
+                    $uniqueName = Str::random(20) . '.' . $image->getClientOriginalExtension();
+                    $image->storeAs('promo_images', $uniqueName, 'public');
+                    $newImages[] = 'promo_images/' . $uniqueName;
+                }
             }
         }
 
-        // Combine retained and new images
-        $finalImages = array_merge($retainedImages, $newImages);
+        // Combine retained and new images, remove duplicates and empty values
+        $finalImages = array_values(array_filter(array_unique(array_merge($retainedImages, $newImages))));
 
         // Update promo in database
         DB::table('promo')
@@ -1036,7 +1038,7 @@ public function updatePromo(Request $request)
                 'menulist' => $validated['menulist'],
                 'venue' => $validated['venue'],
                 'price' => number_format((float)$validated['price'], 2, '.', ''),
-                'image' => implode(',', $finalImages),
+                'image' => count($finalImages) ? implode(',', $finalImages) : null,
                 'updated_at' => now()
             ]);
 
@@ -1052,4 +1054,5 @@ public function updatePromo(Request $request)
         ], 500);
     }
 }
+
 }
