@@ -292,6 +292,12 @@ document.addEventListener("DOMContentLoaded", function () {
                updatePlaceholdersAndButtons();
              };
              w.append(img,btn);
+             
+             const fileName = document.createElement('div');
+             fileName.className = 'file-name';
+             fileName.textContent = file.name;
+             w.appendChild(fileName);
+             
              imagePreviewContainer.appendChild(w);
              dataTransfer.items.add(file);
              updatePlaceholdersAndButtons();
@@ -323,6 +329,12 @@ document.addEventListener("DOMContentLoaded", function () {
                updatePlaceholdersAndButtons();
              };
              w.append(vid,btn);
+             
+             const fileName = document.createElement('div');
+             fileName.className = 'file-name';
+             fileName.textContent = file.name;
+             w.appendChild(fileName);
+             
              videoPreviewContainer.appendChild(w);
              dataTransfer.items.add(file);
              requestAnimationFrame(()=>w.classList.add('show'));
@@ -795,15 +807,17 @@ document.addEventListener('DOMContentLoaded', function () {
                  const imageArray = images.split(',').map(img => img.trim());
                  
                  imageArray.forEach(imagePath => {
-                     // Extract filename from path
                      const filename = imagePath.split('/').pop();
                      
-                     // Create image preview
                      const wrapper = document.createElement('div');
                      wrapper.classList.add('image-preview');
                      
                      const img = document.createElement('img');
                      img.src = `/storage/event_images/${filename}`; // Adjust path as needed
+                     
+                     const fileName = document.createElement('div');  // Add this
+                     fileName.classList.add('file-name');            // Add this
+                     fileName.textContent = filename;                // Add this
                      
                      const removeBtn = document.createElement('button');
                      removeBtn.innerHTML = '&times;';
@@ -813,7 +827,10 @@ document.addEventListener('DOMContentLoaded', function () {
                          updatePlaceholdersAndButtons2();
                      };
                      
-                     wrapper.append(img, removeBtn);
+                     wrapper.appendChild(img);
+                     wrapper.appendChild(fileName);  // Add this
+                     wrapper.appendChild(removeBtn);
+                     
                      imagePreviewContainer2.appendChild(wrapper);
                  });
              }
@@ -824,10 +841,8 @@ document.addEventListener('DOMContentLoaded', function () {
                  const videoArray = videos.split(',').map(vid => vid.trim());
                  
                  videoArray.forEach(videoPath => {
-                     // Extract filename from path
                      const filename = videoPath.split('/').pop();
                      
-                     // Create video preview
                      const wrapper = document.createElement('div');
                      wrapper.classList.add('video-preview');
                      
@@ -837,6 +852,10 @@ document.addEventListener('DOMContentLoaded', function () {
                      video.playsInline = true;
                      video.disablePictureInPicture = true;
                      video.controls = false;
+                     
+                     const fileName = document.createElement('div');  // Add this
+                     fileName.classList.add('file-name');            // Add this
+                     fileName.textContent = filename;                // Add this
                      
                      // Add video interactions
                      video.addEventListener('mouseenter', () => video.play());
@@ -859,6 +878,7 @@ document.addEventListener('DOMContentLoaded', function () {
                      };
                      
                      wrapper.append(video, removeBtn);
+                     wrapper.appendChild(fileName);  // Add this
                      videoPreviewContainer2.appendChild(wrapper);
                      requestAnimationFrame(() => wrapper.classList.add('show'));
                  });
@@ -973,6 +993,12 @@ if (idx > -1) dataTransfer2.items.remove(idx);
 updatePlaceholdersAndButtons2();
 };
 w.append(img, btn);
+
+const fileName = document.createElement('div');
+fileName.className = 'file-name';
+fileName.textContent = file.name;
+w.appendChild(fileName);
+
 imagePreviewContainer2.appendChild(w);
 dataTransfer2.items.add(file);
 updatePlaceholdersAndButtons2();
@@ -1005,6 +1031,12 @@ if (idx > -1) dataTransfer2.items.remove(idx);
 updatePlaceholdersAndButtons2();
 };
 w.append(vid, btn);
+
+const fileName = document.createElement('div');
+fileName.className = 'file-name';
+fileName.textContent = file.name;
+w.appendChild(fileName);
+
 videoPreviewContainer2.appendChild(w);
 dataTransfer2.items.add(file);
 requestAnimationFrame(() => w.classList.add('show'));
@@ -1482,3 +1514,53 @@ document.getElementById('editEventForm').reset();
 updatePlaceholdersAndButtons2();
 }, 300); // Match this with your CSS transition duration
 });
+
+function createPreviewElement(file, isVideo = false) {
+    const wrapper = document.createElement('div');
+    wrapper.classList.add(isVideo ? 'video-preview' : 'image-preview');
+
+    const mediaElement = isVideo ? document.createElement('video') : document.createElement('img');
+    
+    // Set up media element
+    if (isVideo) {
+        mediaElement.controls = false;
+        mediaElement.muted = true;
+        mediaElement.playsInline = true;
+    }
+
+    // Create file name element
+    const fileName = document.createElement('div');
+    fileName.classList.add('file-name');
+    fileName.textContent = file.name;
+
+    // Create remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.innerHTML = '×';
+    removeBtn.classList.add('remove-btn');
+    removeBtn.onclick = () => wrapper.remove();
+
+    // Add elements to wrapper
+    wrapper.appendChild(mediaElement);
+    wrapper.appendChild(fileName);
+    wrapper.appendChild(removeBtn);
+
+    return wrapper;
+}
+
+// Use this function when adding previews in both add and edit modals
+function addPreviewToEdit(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const isVideo = file.type.startsWith('video/');
+        const preview = createPreviewElement(file, isVideo);
+        const mediaElement = preview.querySelector(isVideo ? 'video' : 'img');
+        mediaElement.src = e.target.result;
+        
+        const container = isVideo ? 
+            document.querySelector('#editEventModal #videoPreview') : 
+            document.querySelector('#editEventModal #imagePreview');
+            
+        container.appendChild(preview);
+    };
+    reader.readAsDataURL(file);
+}

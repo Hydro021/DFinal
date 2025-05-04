@@ -102,6 +102,7 @@ public function allV()
 
     return view('admin.venue', compact('venues'));
 }
+
     public function dropdown()
     {
         $categories = DB::table('category')->select('id', 'categoryname')->get();
@@ -215,7 +216,7 @@ public function allV()
                 $images = explode(',', $item->image); // Already has full path like 'menu_images/filename.jpg'
     
                 foreach ($images as $imgPath) {
-                    $imgPath = trim($imgPath);
+                    $imgPath = trim($img);
                     if (Storage::disk('public')->exists($imgPath)) {
                         Storage::disk('public')->delete($imgPath);
                     }
@@ -638,8 +639,16 @@ public function update(Request $request)
         return response()->json(['error' => $e->getMessage()], 500);
     }
 }
-    public function storeV(Request $request)
+    public function storeV(Request $request) 
     {
+        // Add this check at the start
+        if (DB::table('venue')->where('name', $request->venueName)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A venue with this name already exists'
+            ], 422);
+        }
+
         try {
             // Validate request
             $validated = $request->validate([
@@ -735,28 +744,53 @@ public function update(Request $request)
     public function deleteMultipleV(Request $request)
     {
         try {
+            $request->validate([
+                'venueNames' => 'required|array',
+                'venueNames.*' => 'string'
+            ]);
+
             $venueNames = $request->venueNames;
+            $deletedCount = 0;
             
-            foreach ($venueNames as $venueName) {
-                $venue = DB::table('venue')->where('name', $venueName)->first();
-                
-                if ($venue && $venue->image) {
-                    $images = explode(',', $venue->image);
-                    foreach ($images as $image) {
-                        $filename = basename($image);
-                        if (Storage::disk('public')->exists('venue_images/' . $filename)) {
-                            Storage::disk('public')->delete('venue_images/' . $filename);
+            DB::beginTransaction();
+            
+            try {
+                foreach ($venueNames as $venueName) {
+                    $venue = DB::table('venue')->where('name', $venueName)->first();
+                    
+                    if ($venue) {
+                        // Delete associated images
+                        if ($venue->image) {
+                            $images = explode(',', $venue->image);
+                            foreach ($images as $image) {
+                                if (!empty($image)) {
+                                    $filename = basename(trim($image));
+                                    if (Storage::disk('public')->exists('venue_images/' . $filename)) {
+                                        Storage::disk('public')->delete('venue_images/' . $filename);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Delete venue record
+                        if (DB::table('venue')->where('name', $venueName)->delete()) {
+                            $deletedCount++;
                         }
                     }
                 }
                 
-                DB::table('venue')->where('name', $venueName)->delete();
+                DB::commit();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => $deletedCount . ' venue(s) deleted successfully'
+                ]);
+                
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
             }
             
-            return response()->json([
-                'success' => true,
-                'message' => count($venueNames) . ' venues deleted successfully'
-            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -764,5 +798,258 @@ public function update(Request $request)
             ], 500);
         }
     }
-}
 
+    public function editV(Request $request)
+    {
+        try {
+            // Validate request
+            $validated = $request->validate([
+                'venueName' => 'required|string|max:255',
+                'venueLocation' => 'required|string',
+                'venueCapacity' => 'required|integer|min:1',
+                'venueOther' => 'required_if:venueLocation,Other',
+                'floors' => 'required_if:venueLocation,Dande\'s Resto',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+                'retained_images' => 'nullable|string'
+            ]);
+
+            // Get the venue
+            $venue = DB::table('venue')->where('name', $request->venueName)->first();
+            if (!$venue) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Venue not found'
+                ], 404);
+            }
+
+            // Handle existing images
+            $existingImages = !empty($venue->image) ? explode(',', $venue->image) : [];
+            $retainedImages = !empty($request->retained_images) ? explode(',', $request->retained_images) : [];
+
+            // Remove deleted images from storage
+            foreach ($existingImages as $image) {
+                if (!in_array($image, $retainedImages)) {
+                    if (Storage::disk('public')->exists($image)) {
+                        Storage::disk('public')->delete($image);
+                    }
+                }
+            }
+
+            // Handle new image uploads
+            $newImageNames = [];
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $randomNumber = Str::random(20);
+                    $extension = $image->getClientOriginalExtension();
+                    $fileName = $randomNumber . '.' . $extension;
+                    
+                    // Store image and add to array
+                    $image->storeAs('venue_images', $fileName, 'public');
+                    $newImageNames[] = 'venue_images/' . $fileName;
+                }
+            }
+
+            // Combine retained and new images
+            $finalImages = array_merge($retainedImages, $newImageNames);
+
+            // Create venue update data array
+            $venueData = [
+                'location' => $request->venueLocation,
+                'capacity' => $request->venueCapacity,
+                'specifylocation' => $request->venueLocation === 'Other' ? $request->venueOther : "",
+                'floorlevel' => $request->venueLocation === "Dande's Resto" ? $request->floors : "",
+                'image' => !empty($finalImages) ? implode(',', $finalImages) : "",
+                'updated_at' => now()
+            ];
+
+            // Update venue in database
+            DB::table('venue')
+                ->where('name', $request->venueName)
+                ->update($venueData);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Venue updated successfully'
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Venue update error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while updating the venue'
+            ], 500);
+        }
+    }
+    public function GA()
+    {
+        if (!session('admin_logged_in')) {
+            return redirect('admin/login')->with('error', 'Please log in first.');
+        }
+        // Get menu names directly from database
+        $menus = DB::table('menu')->select('id', 'name')->get();
+        
+        // Get venue names directly from database
+        $venues = DB::table('venue')->select('id', 'name')->get();
+        $promos = DB::table('promo')->get();
+        
+        return view('admin.promo', compact('menus', 'venues', 'promos'));
+    }
+  
+    public function storePromo(Request $request)
+{
+    $validated = $request->validate([
+        'name'        => 'required|string|max:255|unique:promo,name',
+        'description' => 'required|string',
+        'menulist'    => 'required|string',
+        'venue'       => 'required|string',
+        'price' => ['required', 'regex:/^\d+(\.\d{0,2})?$/', 'numeric', 'min:0'], 
+        'images'      => 'sometimes|array',
+        'images.*'    => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+    ]);
+    // 3) Upload each image under promo_images/ in the public disk
+    $imagePaths = [];
+    if ($request->hasFile('images')) {
+        foreach ($request->file('images') as $file) {
+            $name      = Str::random(20) . '.' . $file->getClientOriginalExtension();
+            $path      = $file->storeAs('promo_images', $name, 'public');
+            $imagePaths[] = $path;              // e.g. "promo_images/abcdef1234.jpg"
+        }
+    }
+    $price = number_format((float)$validated['price'], 2, '.', '');
+
+    // 4) Prepare your insert array
+    $promoData = [
+        'name'        => $validated['name'],
+        'description' => $validated['description'],
+        'menulist'    => $validated['menulist'],
+        'venue'       => $validated['venue'],
+        'price' => number_format((float)$validated['price'], 2, '.', ''),
+        'image'       => count($imagePaths) ? implode(',', $imagePaths) : null,
+        'created_at'  => now(),
+        'updated_at'  => now(),
+    ];
+    // 5) Run the insert
+    DB::table('promo')->insert($promoData);
+
+    // 6) Return JSON success
+    return response()->json([
+        'success' => true,
+        'message' => 'Promo created successfully',
+    ]);
+}
+public function deletePromos(Request $request)
+{
+    $request->validate([
+        'promoNames' => 'required|array',
+        'promoNames.*' => 'string|max:255',
+    ]);
+
+    $promoNames = $request->promoNames;
+    
+    foreach ($promoNames as $promoName) {
+        $promo = DB::table('promo')->where('name', $promoName)->first();
+        
+        if (!$promo) {
+            continue;
+        }
+
+        // Delete associated images
+        if (!empty($promo->image)) {
+            $images = explode(',', $promo->image);
+            foreach ($images as $img) {
+                $imgPath = trim($img); // Already includes promo_images/
+                if (Storage::disk('public')->exists($imgPath)) {
+                    Storage::disk('public')->delete($imgPath);
+                }
+            }
+        }
+
+        // Delete promo record
+        DB::table('promo')->where('id', $promo->id)->delete();
+    }
+
+    return response()->json([
+        'success' => true, 
+        'message' => 'Selected promo(s) deleted successfully.'
+    ]);
+}
+// Add this method to your AdminDash controller
+public function updatePromo(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'menulist' => 'required|string',
+            'venue' => 'required|string',
+            'price' => ['required', 'regex:/^\d+(\.\d{0,2})?$/', 'numeric', 'min:0'],
+            'images.*' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'retained_images' => 'nullable|string'
+        ]);
+
+        // Get the promo by original name
+        $promo = DB::table('promo')->where('name', $request->original_name)->first();
+        if (!$promo) {
+            return response()->json(['success' => false, 'message' => 'Promo not found'], 404);
+        }
+
+        // Handle existing images
+        $existingImages = !empty($promo->image) ? explode(',', $promo->image) : [];
+        $retainedImages = !empty($request->retained_images) ? explode(',', $request->retained_images) : [];
+
+        // Delete removed images from storage
+        foreach ($existingImages as $image) {
+            if (!in_array($image, $retainedImages)) {
+                if (Storage::disk('public')->exists($image)) {
+                    Storage::disk('public')->delete($image);
+                }
+            }
+        }
+
+        // Handle new image uploads
+        $newImages = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $uniqueName = Str::random(20) . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('promo_images', $uniqueName, 'public');
+                $newImages[] = 'promo_images/' . $uniqueName;
+            }
+        }
+
+        // Combine retained and new images
+        $finalImages = array_merge($retainedImages, $newImages);
+
+        // Update promo in database
+        DB::table('promo')
+            ->where('name', $request->original_name)
+            ->update([
+                'name' => $validated['name'],
+                'description' => $validated['description'],
+                'menulist' => $validated['menulist'],
+                'venue' => $validated['venue'],
+                'price' => number_format((float)$validated['price'], 2, '.', ''),
+                'image' => implode(',', $finalImages),
+                'updated_at' => now()
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Promo updated successfully'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error updating promo: ' . $e->getMessage()
+        ], 500);
+    }
+}
+}

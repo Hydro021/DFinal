@@ -1114,7 +1114,7 @@ nav .admin-link i:hover {
 }
 
 .edit-image-preview .remove-btn,
-.edit-video-preview .remove-btn {
+	edit-video-preview .remove-btn {
     top: 5px;
     right: 5px;
     width: 20px;
@@ -1394,10 +1394,6 @@ nav .admin-link i:hover {
     background: #fff;
     border: 1px solid #ddd;
 }
-#videoPreviewContainer .h4 {
-    font-size: 15px;
-    color: white;
-}
 
 /* ========== IMAGE/VIDEO BOX ========== */
 .image-preview,
@@ -1411,12 +1407,72 @@ nav .admin-link i:hover {
     overflow: hidden;
     cursor: pointer;
 }
+
 .image-preview img,
 .video-preview video {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border-radius: 4px;
+}
+
+/* File Name Display */
+.image-preview .file-name,
+.video-preview .file-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+/* Remove Button Styling */
+.image-preview .remove-btn,
+.video-preview .remove-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.image-preview .remove-btn:hover,
+.video-preview .remove-btn:hover {
+    background-color: rgba(255, 0, 0, 0.8);
+}
+
+/* Apply same styles for edit modal */
+.edit-image-preview .file-name,
+.edit-video-preview .file-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 1;
 }
 
 /* ========== VIDEO ENLARGE & REMOVE ========== */
@@ -1453,7 +1509,7 @@ nav .admin-link i:hover {
     background-color: rgba(0, 0, 0, 0.7);
 }
 .image-preview .remove-btn:hover,
-.video-preview .remove-btn:hover {
+	video-preview .remove-btn:hover {
     background-color: rgba(255, 0, 0, 0.8);
 }
 
@@ -1526,6 +1582,71 @@ nav .admin-link i:hover {
     cursor: pointer;
 }
 
+/* File name styling for both add and edit modals */
+.image-preview .file-name,
+.video-preview .file-name,
+.edit-image-preview .file-name,
+.edit-video-preview .file-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 2;
+}
+
+/* Edit modal specific preview styles */
+#editEventModal .image-preview,
+#editEventModal .video-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #f8f8f8;
+    overflow: hidden;
+}
+
+#editEventModal .image-preview img,
+#editEventModal .video-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+#editEventModal .file-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+/* Preview container grid layout */
+#editEventModal #imagePreview,
+#editEventModal #videoPreview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #ddd;
+}
 
 /* Profile Dropdown Menu */
 #profileDropdown {
@@ -1604,4 +1725,68 @@ nav .admin-link i:hover {
 
 #profileDropdown .profile-options li i {
     margin-right: 10px;
+}
+
+/* Preview container styling */
+#imagePreview,
+#videoPreview,
+#editImagePreview,
+#editVideoPreview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    position: relative;
+}
+
+/* Preview item styling */
+.image-preview,
+.video-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Media element styling */
+.image-preview img,
+.video-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Hover effect for file names */
+.image-preview:hover .file-name,
+.video-preview:hover .file-name {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* File name styling specifically for edit modal */
+#editEventModal .image-preview .file-name,
+#editEventModal .video-preview .file-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 2;
+}
+
+#editEventModal .image-preview,
+#editEventModal .video-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #f8f8f8;
+    overflow: hidden;
 }

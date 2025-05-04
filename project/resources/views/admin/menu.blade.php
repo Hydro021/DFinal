@@ -354,7 +354,7 @@
                 <div class="form-left">
                     <div class="form-group">
                         <label for="editMenuName">Name:</label>
-                        <input type="text" id="editMenuName" name="name" required>
+                        <input type="text" id="editMenuName" name="name" readonly style="color:red">
                     </div>
                     <div class="form-group">
                         <label for="editDescription">Description:</label>

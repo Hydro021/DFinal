@@ -45,6 +45,12 @@ Route::get('admin/venue', function () {
     }
     return view('admin.venue');
     });
+    Route::get('admin/promo', function () {
+        if (!session('admin_logged_in')) {
+        return redirect('admin/login')->with('error', 'Please log in first.');
+        }
+        return view('admin.promo');
+        });
 Route::post('admin/logout', function () {
 session()->forget('admin_logged_in'); // Clear session
 return redirect('admin/login')->with('success', 'Logged out successfully.');
@@ -92,3 +98,8 @@ Route::put('/admin/event/update', [AdminDash::class, 'update'])->name('admin.eve
 Route::post('/venue/store', [AdminDash::class, 'storeV'])->name('venue.store');
 Route::post('/admin/venue/delete', [AdminDash::class, 'deleteV'])->name('admin.venue.delete');
 Route::post('/admin/venue/delete-multiple', [AdminDash::class, 'deleteMultipleV'])->name('admin.venue.deleteMultiple');
+Route::post('/admin/venue/edit', [AdminDash::class, 'editV'])->name('admin.venue.edit');
+Route::get('admin/promo', [AdminDash::class, 'GA']);
+Route::post('/admin/promo/store', [AdminDash::class, 'storePromo'])->name('admin.promo.store');
+Route::post('/admin/promo/delete', [AdminDash::class, 'deletePromos'])->name('admin.promo.delete');
+Route::post('/admin/promo/update', [AdminDash::class, 'updatePromo'])->name('admin.promo.update');

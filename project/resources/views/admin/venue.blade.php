@@ -134,9 +134,8 @@
 						<div class="icon hidden" id="delete-btn" onclick="deleteSelectedItems()"><i class="bx bx-trash"></i></div>
 						<select id="venueFilter" onchange="filterVenues()">
 							<option value="all">All</option>
-							<option value="ground-floor">Ground Floor</option>
-							<option value="first-floor">First Floor</option>
-							<option value="rooftop">Rooftop</option>
+							<option value="dandes-resto">Dande's Resto</option>
+							<option value="other">Other</option>
 						</select>
 					</div>
 				</div>
@@ -260,7 +259,70 @@
 			</button>
 		</div>
 	</div>
-	<div id="notification" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #28a745; color: white; padding: 10px 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); font-size: 16px; z-index: 9999;">
+
+	<!-- Edit Venue Modal HTML -->
+	<div id="editVenueModal" class="edit-modal">
+		<div class="edit-modal-content">
+			<div class="edit-modal-nav">
+				<span class="edit-close">&times;</span>
+				<h2>EDIT VENUE</h2>
+			</div>
+			<div class="edit-modal-body">
+				<div class="edit-form-left">
+					<form id="editVenueForm" enctype="multipart/form-data">
+						@csrf
+						<input type="hidden" id="editVenueId" name="venueId">
+						<div class="edit-form-group">
+							<label for="editVenueName">Venue Name:</label>
+							<input type="text" id="editVenueName" readonly style="color:red">
+						</div>
+						<div class="edit-form-group">
+							<label for="editVenueLocation">Location:</label>
+							<select id="editVenueLocation" required>
+								<option value="">Select Location</option>
+								<option value="Dande's Resto">Dande's Resto</option>
+								<option value="Other">Other</option>
+							</select>
+						</div>
+						<div class="edit-form-group" id="editVenueFloorGroup">
+							<label for="editVenueFloor">Floor Levels:</label>
+							<input type="text" id="editVenueFloorInput" placeholder="Add Floor Level">
+							<div id="editFloorList" class="edit-floor-list"></div>
+							<input type="hidden" id="editFloorsField" name="floors">
+						</div>
+						<div class="edit-form-group" id="editVenueOtherGroup" style="display: none;">
+							<label for="editVenueOther">Specify Location:</label>
+							<input type="text" id="editVenueOther" placeholder="Enter Venue Location">
+						</div>
+						<div class="edit-form-group">
+							<label for="editVenueCapacity">Capacity:</label>
+							<input type="number" id="editVenueCapacity" required min="1">
+						</div>
+					</form>
+				</div>
+				<div class="edit-form-right">
+					<div class="edit-form-group-image" id="editDropArea">
+						<label for="editVenueImage">Drag & Drop Images Here</label>
+						<input type="file" id="editVenueImage" accept="image/*" multiple style="display: none;">
+						<p>image files & folders</p>
+					</div>
+					<div id="editClearAllBtn" class="edit-clear-icon-container">
+						<i class="edit-clear-icon fas fa-times"></i>
+						<span class="edit-clear-text">Clear</span>
+					</div>
+					<div id="editVenueImagePreviewContainer">
+						<p id="editPlaceholderText" class="edit-placeholder-text">Images will be shown here</p>
+					</div>
+				</div>
+			</div>
+			<button type="submit" id="updateVenueBtn">
+				<i class="bx bx-check"></i>
+				Update Venue
+			</button>
+		</div>
+	</div>
+
+	<div id="notification" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #28a745; color: white; padding: 10px 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); font-size: 16px; z-index: 99999;">
     <span id="notification-message"></span>
 </div>
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
